@@ -275,7 +275,7 @@ def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, 
                 t_track['streamable'] = track.streamable
                 t_track['title'] = track.title
                 t_track['user'] = {'username': track.user['username']}
-                t_track['release_year'] = track.release
+                t_track['created_at'] = track.created_at
                 t_track['genre'] = track.genre
                 t_track['artwork_url'] = track.artwork_url
                 if track.downloadable:
@@ -994,10 +994,12 @@ def sanitize_filename(filename):
     Returns:
         str: 
     """
-    sanitized_filename = re.sub(r'[/\\:*?"<>|]', '-', filename)
+    sanitized_filename = re.sub(r'[/\\*:<>|]', ' - ', filename)
     sanitized_filename = sanitized_filename.replace('&', 'and')
     sanitized_filename = sanitized_filename.replace('"', '')
     sanitized_filename = sanitized_filename.replace("'", '')
+    sanitized_filename = sanitized_filename.replace("?", '')
+    sanitized_filename = sanitized_filename.replace("  ", ' ')
     return sanitized_filename
 
 
