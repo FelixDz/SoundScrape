@@ -63,6 +63,8 @@ def main():
                         help='Organize saved songs in folders by artists')
     parser.add_argument('-o', '--open', action='store_true',
                         help='Open downloaded files after downloading.')
+    parser.add_argument('-sd', '--savedir', type=str, default='D:\Downloads',
+                        help='Specify a custom save directory for all the music. Defaulted to "D:\Downloads" for playlists, else "D:\Downloads\SoundScrap".')
 
     args = parser.parse_args()
     vargs = vars(args)
@@ -238,7 +240,7 @@ def process_soundcloud(vargs):
             num_tracks = vargs['num_tracks']
         if not aggressive:
             filenames = download_tracks(client, tracks, num_tracks, vargs['downloadable'], vargs['folders'],
-                                        id3_extras=id3_extras, playlist=is_playlist)
+                                        id3_extras=id3_extras, playlist=is_playlist, custom_folder=vargs['savedir'])
 
     if vargs['open']:
         open_files(filenames)
@@ -252,13 +254,11 @@ def get_client():
     return client
 
 
-def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, folders=False, id3_extras={}, playlist=False):
+def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, folders=False, id3_extras={}, playlist=False, custom_folder='D:\Downloads\SoundScrap'):
     """
     Given a list of tracks, iteratively download all of them.
 
     """
-
-    main_save_folder = "D:\Downloads"
 
     filenames = []
 
@@ -313,7 +313,7 @@ def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, 
                 track_year = track['created_at'][:4]
 
                 if playlist:
-                    current_dir = join(main_save_folder, track_artist)
+                    current_dir = join(custom_folder, track_artist)
                     if not exists(current_dir):
                         mkdir(current_dir)
 
@@ -324,9 +324,12 @@ def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, 
                     track_filename = join(current_dir, track_filename)
 
                 elif folders:
-                    if not exists(track_artist):
-                        mkdir(track_artist)
-                    track_filename = join(track_artist, track_filename)
+                    current_dir = join(custom_folder, track_artist)
+                    if not exists(current_dir):
+                        mkdir(current_dir)
+                    track_filename = join(current_dir, track_filename)
+                else:
+                    track_filename = join(custom_folder, track_filename)
 
                 if exists(track_filename) and folders:
                     puts(colored.yellow("Track already downloaded: ") + colored.white(track_title))
