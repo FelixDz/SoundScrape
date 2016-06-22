@@ -151,6 +151,8 @@ def process_soundcloud(vargs):
     else:
         aggressive = False
 
+        is_playlist = False
+
         # This is is likely a 'likes' page.
         if not hasattr(resolved, 'kind'):
             tracks = resolved
@@ -162,6 +164,7 @@ def process_soundcloud(vargs):
             elif resolved.kind == 'playlist':
                 tracks = resolved.tracks
                 id3_extras['album'] = resolved.title
+                is_playlist = True
             elif resolved.kind == 'track':
                 tracks = [resolved]
             elif resolved.kind == 'group':
@@ -235,7 +238,7 @@ def process_soundcloud(vargs):
             num_tracks = vargs['num_tracks']
         if not aggressive:
             filenames = download_tracks(client, tracks, num_tracks, vargs['downloadable'], vargs['folders'],
-                                        id3_extras=id3_extras)
+                                        id3_extras=id3_extras, playlist=is_playlist)
 
     if vargs['open']:
         open_files(filenames)
@@ -249,11 +252,13 @@ def get_client():
     return client
 
 
-def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, folders=False, id3_extras={}):
+def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, folders=False, id3_extras={}, playlist=False):
     """
     Given a list of tracks, iteratively download all of them.
 
     """
+
+    main_save_folder = "D:\Downloads"
 
     filenames = []
 
@@ -301,11 +306,24 @@ def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, 
                 puts(colored.white(track['title']) + colored.red(' is not downloadable.'))
                 continue
             else:
+                track_nb = str(i+1).zfill(max(2, len(str(len(tracks)))))
                 track_artist = sanitize_filename(track['user']['username'])
                 track_title = sanitize_filename(track['title'])
-                track_filename = track_artist + ' - ' + track_title + '.mp3'
+                track_filename = track_nb + ' - ' + track_title + '.mp3'
+                track_year = track['created_at'][:4]
 
-                if folders:
+                if playlist:
+                    current_dir = join(main_save_folder, track_artist)
+                    if not exists(current_dir):
+                        mkdir(current_dir)
+
+                    current_dir = join(current_dir, track_year + ' - ' + id3_extras.get('album', None))
+                    if not exists(current_dir):
+                        mkdir(current_dir)
+
+                    track_filename = join(current_dir, track_filename)
+
+                elif folders:
                     if not exists(track_artist):
                         mkdir(track_artist)
                     track_filename = join(track_artist, track_filename)
@@ -328,10 +346,11 @@ def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, 
                 tag_file(path,
                          artist=track['user']['username'],
                          title=track['title'],
-                         year=track['release_year'],
+                         year=track_year,
                          genre=track['genre'],
                          album=id3_extras.get('album', None),
-                         artwork_url=track['artwork_url'])
+                         artwork_url=track['artwork_url'],
+                         track_number=track_nb),
                 filenames.append(path)
         except Exception as e:
             puts(colored.red("Problem downloading ") + colored.white(track['title']))
