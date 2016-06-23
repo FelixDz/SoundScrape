@@ -7,6 +7,7 @@ import re
 import requests
 import soundcloud
 import sys
+import os
 
 from clint.textui import colored, puts, progress
 from datetime import datetime
@@ -14,7 +15,7 @@ from mutagen.mp3 import MP3, EasyMP3
 from mutagen.id3 import APIC
 from mutagen.id3 import ID3 as OldID3
 from subprocess import Popen, PIPE
-from os.path import exists, join
+from os.path import exists, join, expanduser
 from os import mkdir
 
 ####################################################################
@@ -29,7 +30,53 @@ APP_VERSION = '1464790339'
 
 
 ####################################################################
+# Code for default folder load from http://stackoverflow.com/a/35851955
 
+if os.name == 'nt':
+    import ctypes
+    from ctypes import windll, wintypes
+    from uuid import UUID
+
+    # ctypes GUID copied from MSDN sample code
+    class GUID(ctypes.Structure):
+        _fields_ = [
+            ("Data1", wintypes.DWORD),
+            ("Data2", wintypes.WORD),
+            ("Data3", wintypes.WORD),
+            ("Data4", wintypes.BYTE * 8)
+        ] 
+
+        def __init__(self, uuidstr):
+            uuid = UUID(uuidstr)
+            ctypes.Structure.__init__(self)
+            self.Data1, self.Data2, self.Data3, \
+                self.Data4[0], self.Data4[1], rest = uuid.fields
+            for i in range(2, 8):
+                self.Data4[i] = rest>>(8-i-1)*8 & 0xff
+
+    SHGetKnownFolderPath = windll.shell32.SHGetKnownFolderPath
+    SHGetKnownFolderPath.argtypes = [
+        ctypes.POINTER(GUID), wintypes.DWORD,
+        wintypes.HANDLE, ctypes.POINTER(ctypes.c_wchar_p)
+    ]
+
+    def _get_known_folder_path(uuidstr):
+        pathptr = ctypes.c_wchar_p()
+        guid = GUID(uuidstr)
+        if SHGetKnownFolderPath(ctypes.byref(guid), 0, 0, ctypes.byref(pathptr)):
+            raise ctypes.WinError()
+        return pathptr.value
+
+    FOLDERID_Download = '{374DE290-123F-4565-9164-39C4925E467B}'
+
+    def get_download_folder():
+        return _get_known_folder_path(FOLDERID_Download)
+else:
+    def get_download_folder():
+        home = os.path.expanduser("~")
+        return os.path.join(home, "Downloads")
+
+####################################################################
 
 def main():
     """
@@ -63,7 +110,7 @@ def main():
                         help='Organize saved songs in folders by artists')
     parser.add_argument('-o', '--open', action='store_true',
                         help='Open downloaded files after downloading.')
-    parser.add_argument('-sd', '--savedir', type=str, default='D:\Downloads',
+    parser.add_argument('-sd', '--savedir', type=str, default=get_download_folder(),
                         help='Specify a custom save directory for all the music. Defaulted to "D:\Downloads" for playlists, else "D:\Downloads\SoundScrap".')
 
     args = parser.parse_args()
@@ -254,7 +301,7 @@ def get_client():
     return client
 
 
-def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, nofolders=False, id3_extras={}, playlist=False, custom_folder='D:\Downloads\SoundScrap'):
+def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, nofolders=False, id3_extras={}, playlist=False, custom_folder=get_download_folder()):
     """
     Given a list of tracks, iteratively download all of them.
 
