@@ -306,7 +306,7 @@ def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, 
                 puts(colored.white(track['title']) + colored.red(' is not downloadable.'))
                 continue
             else:
-                track_nb = str(i+1).zfill(max(2, len(str(len(tracks)))))
+                track_nb = str(i+1).zfill(2)
                 track_artist = sanitize_filename(track['user']['username'])
                 track_title = sanitize_filename(track['title'])
                 track_filename = track_nb + ' - ' + track_title + '.mp3'
@@ -430,7 +430,7 @@ def process_bandcamp(vargs):
     else:
         bc_url = 'https://' + artist_url + '.bandcamp.com/music'
 
-    filenames = scrape_bandcamp_url(bc_url, num_tracks=vargs['num_tracks'], nofolders=vargs['nofolders'])
+    filenames = scrape_bandcamp_url(bc_url, num_tracks=vargs['num_tracks'], nofolders=vargs['nofolders'], custom_folder=vargs['savedir'])
 
     # check if we have lists inside a list, which indicates the
     # scraping has gone recursive, so we must format the output
@@ -450,7 +450,7 @@ def process_bandcamp(vargs):
 
 
 # Largely borrowed from Ronier's bandcampscrape
-def scrape_bandcamp_url(url, num_tracks=sys.maxsize, nofolders=False):
+def scrape_bandcamp_url(url, num_tracks=sys.maxsize, nofolders=False, custom_folder='D:\Downloads\SoundScrap'):
     """
     Pull out artist and track info from a Bandcamp URL.
 
@@ -470,15 +470,24 @@ def scrape_bandcamp_url(url, num_tracks=sys.maxsize, nofolders=False):
 
     artist = album_data["artist"]
     album_name = album_data["album_name"]
+    album_year = album_data['album_release_date']
+    if album_year:
+        album_year = datetime.strptime(album_year, "%d %b %Y %H:%M:%S GMT").year
 
     if nofolders:
+        current_dir = custom_folder
+
+    else:
+
+        current_dir = join(custom_folder, sanitize_filename(artist))
+        if not exists(current_dir):
+            mkdir(current_dir)
+
         if album_name:
-            directory = artist + " - " + album_name
-        else:
-            directory = artist
-        directory = sanitize_filename(directory)
-        if not exists(directory):
-            mkdir(directory)
+
+            current_dir = join(current_dir, str(album_year) + ' - ' + sanitize_filename(album_name))
+            if not exists(current_dir):
+                mkdir(current_dir)
 
     for i, track in enumerate(album_data["trackinfo"]):
 
@@ -491,29 +500,24 @@ def scrape_bandcamp_url(url, num_tracks=sys.maxsize, nofolders=False):
                 track_number = str(track["track_num"]).zfill(2)
             else:
                 track_number = None
-            if track_number and nofolders:
+            if track_number:
                 track_filename = '%s - %s.mp3' % (track_number, track_name)
             else:
                 track_filename = '%s.mp3' % (track_name)
             track_filename = sanitize_filename(track_filename)
-            if nofolders:
-                path = join(directory, track_filename)
-            else:
-                path = artist + ' - ' + track_filename
+
+            path = join(current_dir, track_filename)
+
             if exists(path):
                 puts(colored.yellow("Track already downloaded: ") + colored.white(track_name))
                 continue
 
             if not track['file']:
-                puts(colored.yellow("Track unavailble for scraping: ") + colored.white(track_name))
+                puts(colored.yellow("Track unavailable for scraping: ") + colored.white(track_name))
                 continue
 
             puts(colored.green("Downloading") + colored.white(": " + track_name))
             path = download_file(track['file']['mp3-128'], path)
-
-            album_year = album_data['album_release_date']
-            if album_year:
-                album_year = datetime.strptime(album_year, "%d %b %Y %H:%M:%S GMT").year
 
             tag_file(path,
                      artist,
@@ -998,7 +1002,6 @@ def sanitize_filename(filename):
     sanitized_filename = re.sub(r'[/\\*:<>|]', ' - ', filename)
     sanitized_filename = sanitized_filename.replace('&', 'and')
     sanitized_filename = sanitized_filename.replace('"', '')
-    sanitized_filename = sanitized_filename.replace("'", '')
     sanitized_filename = sanitized_filename.replace("?", '')
     sanitized_filename = sanitized_filename.replace("  ", ' ')
     return sanitized_filename
