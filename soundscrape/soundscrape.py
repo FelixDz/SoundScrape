@@ -455,10 +455,14 @@ def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, 
                 track_nb = str(i+1).zfill(2)
                 track_artist = sanitize_filename(track['user']['username'])
                 track_title = sanitize_filename(track['title'])
-                track_filename = track_nb + ' - ' + track_title + '.mp3'
+                if playlist:
+                    track_filename = track_nb + ' - ' + track_title + '.mp3'
+                else:
+                    track_filename = track_title + '.mp3'
                 track_year = track['created_at'][:4]
 
                 if nofolders:   # No special folders created in the root save folder
+                    track_filename = track_artist + ' - ' + track_filename
                     track_filename = join(custom_folder, track_filename)
 
                 elif playlist:  # Playlist tracks are stored in "Artist\Year - Album\" in the root save folder
