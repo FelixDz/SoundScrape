@@ -2,12 +2,6 @@ env/
 *.DS_Store
 *.pyc
 *.bak
-build/lib/soundscrape/soundscrape.py
-build/lib/soundscrape/__init__.py
-dist/soundscrape-0.25.2-py3.5.egg
-soundscrape.egg-info/dependency_links.txt
-soundscrape.egg-info/entry_points.txt
-soundscrape.egg-info/PKG-INFO
-soundscrape.egg-info/requires.txt
-soundscrape.egg-info/SOURCES.txt
-soundscrape.egg-info/top_level.txt
+build/
+dist/
+soundscrape.egg-info/
