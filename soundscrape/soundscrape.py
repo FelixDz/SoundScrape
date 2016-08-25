@@ -200,7 +200,7 @@ def process_soundcloud(vargs):
             if(hasattr(resolved, 'next_href')): 
                 next_href = resolved.next_href
             while (next_href):  
-                
+
                 resolved2 = requests.get(next_href).json()          
                 if('next_href' in resolved2): 
                     next_href = resolved2['next_href']
@@ -244,13 +244,18 @@ def process_soundcloud(vargs):
         #     return None
 
         filename = download_file(hard_track_url, filename)
-        tag_file(filename,
+        tagged = tag_file(filename,
                  artist=track_data['artist'],
                  title=track_data['title'],
                  year='2016',
                  genre='',
                  album='',
                  artwork_url='')
+
+        if not tagged:
+            wav_filename = filename[:-3] + 'wav'
+            os.rename(filename, wav_filename)
+            filename = wav_filename
 
         filenames.append(filename)
 
@@ -389,13 +394,17 @@ def download_track(track, album_name=u'', keep_previews=False, nofolders=False, 
         return None
 
     filename = download_file(hard_track_url, filename)
-    tag_file(filename,
+    tagged = tag_file(filename,
              artist=name,
              title=track['title'],
              year=track['created_at'][:4],
              genre=track['genre'],
              album=album_name,
              artwork_url=track['artwork_url'])
+    if not tagged:
+        wav_filename = filename[:-3] + 'wav'
+        os.rename(filename, wav_filename)
+        filename = wav_filename
 
     return filename
 
@@ -497,16 +506,22 @@ def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, 
                     else:
                         location = stream.url
 
-                path = download_file(location, track_filename)
-                tag_file(path,
+                filename = download_file(location, track_filename)
+                tagged = tag_file(filename,
                          artist=track['user']['username'],
                          title=track['title'],
                          year=track_year,
                          genre=track['genre'],
                          album=id3_extras.get('album', None),
                          artwork_url=track['artwork_url'],
-                         track_number=track_nb),
-                filenames.append(path)
+                         track_number=track_nb)
+
+                if not tagged:
+                    wav_filename = filename[:-3] + 'wav'
+                    os.rename(filename, wav_filename)
+                    filename = wav_filename
+
+                filenames.append(filename)
         except Exception as e:
             puts(colored.red("Problem downloading ") + colored.white(track['title']))
             print(e)
@@ -1149,9 +1164,12 @@ def tag_file(filename, artist, title, year=None, genre=None, artwork_url=None, a
                 )
             )
             audio.save()
-    except Exception as e:
-        print(e)
 
+        return True
+
+    except Exception as e:
+        puts(colored.red("Problem tagging file: ") + colored.white("Is this file a WAV?"))
+        return False
 
 def open_files(filenames):
     """
