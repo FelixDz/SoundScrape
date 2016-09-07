@@ -16,7 +16,7 @@ from mutagen.id3 import APIC
 from mutagen.id3 import ID3 as OldID3
 from subprocess import Popen, PIPE
 from os.path import exists, join
-from os import mkdir
+from os import mkdir, remove
 
 ####################################################################
 
@@ -72,6 +72,8 @@ def main():
                         help='Keep 30-second preview tracks')
     parser.add_argument('-v', '--version', action='store_true', default=False,
                         help='Display the current version of SoundScrape')
+    parser.add_argument('-co', '--convert', action='store_true',
+                        help='Ensure all files are converted to mp3 wih tags')
 
     args = parser.parse_args()
     vargs = vars(args)
@@ -104,6 +106,15 @@ def main():
 # SoundCloud
 ####################################################################
 
+def convert_track(ori_filename):
+    try:
+        filename = ori_filename[:-3] + 'mp3'
+        command = ["ffmpeg", "-v", "quiet", "-nostats", "-y", '-i', ori_filename, "-b:a", "320k",  filename]
+        puts_safe(colored.yellow("Converting to mp3: ") + colored.white(filename[:-4]))
+        Popen(command).wait()
+        os.remove(ori_filename)
+    except Exception as e:
+        puts_safe(colored.red("Do you have ffmpeg installed and added to the environment"))
 
 def process_soundcloud(vargs):
     """
@@ -138,7 +149,6 @@ def process_soundcloud(vargs):
         num_tracks = 1
     else:
         num_tracks = vargs['num_tracks']
-
     try:
         if one_track:
             resolved = client.get('/resolve', url=track_url, limit=200)
@@ -157,7 +167,7 @@ def process_soundcloud(vargs):
                     next_href = resolved2['next_href']
                 else: 
                     next_href = False
-                resolved2 = soundcloud.resource.ResourceList(resolved2['collection']) 
+                resolved2 = soundcloud.resource.ResourceList(resolved2['collection'])
                 resolved.collection.extend(resolved2)
             resolved = resolved.collection
 
@@ -202,11 +212,21 @@ def process_soundcloud(vargs):
                  genre='',
                  album='',
                  artwork_url='')
-
+        
         if not tagged:
             wav_filename = filename[:-3] + 'wav'
             os.rename(filename, wav_filename)
-            filename = wav_filename
+            if convert:
+                convert_track(wav_filename)
+                tag_file(filename,
+                 artist=track_data['artist'],
+                 title=track_data['title'],
+                 year='2016',
+                 genre='',
+                 album='',
+                 artwork_url='')
+            else:
+                filename = wav_filename
 
         filenames.append(filename)
 
@@ -228,7 +248,7 @@ def process_soundcloud(vargs):
                 else:
                     tracks = get_soundcloud_api_playlist_data(resolved.id)['tracks']
                     for track in tracks:
-                        download_track(track, resolved.title, keep_previews, folders)
+                        download_track(track, resolved.title, keep_previews, folders, vargs['convert'])
 
             elif resolved.kind == 'track':
                 tracks = [resolved]
@@ -254,7 +274,7 @@ def process_soundcloud(vargs):
                         if track['type'] == 'playlist':
                             for playlist_track in track['playlist']['tracks']:
                                 album_name = track['playlist']['title']
-                                filename = download_track(playlist_track, album_name, keep_previews, folders, filenames)
+                                filename = download_track(playlist_track, album_name, keep_previews, folders, vargs['convert'], filenames)
                                 if filename:
                                     filenames.append(filename)
                         else:
@@ -264,7 +284,7 @@ def process_soundcloud(vargs):
                                 filenames.append(filename)
 
         if not aggressive:
-            filenames = download_tracks(client, tracks, num_tracks, vargs['downloadable'], vargs['folders'],
+            filenames = download_tracks(client, tracks, num_tracks, vargs['downloadable'], vargs['folders'], vargs['convert'],
                                         id3_extras=id3_extras)
 
     if vargs['open']:
@@ -278,7 +298,7 @@ def get_client():
     client = soundcloud.Client(client_id=CLIENT_ID)
     return client
 
-def download_track(track, album_name=u'', keep_previews=False, folders=False, filenames=[]):
+def download_track(track, album_name=u'', keep_previews=False, folders=False, convert=False, filenames=[]):
     """
     Given a track, force scrape it.
     """
@@ -330,14 +350,25 @@ def download_track(track, album_name=u'', keep_previews=False, folders=False, fi
              genre=track['genre'],
              album=album_name,
              artwork_url=track['artwork_url'])
+    
     if not tagged:
         wav_filename = filename[:-3] + 'wav'
         os.rename(filename, wav_filename)
-        filename = wav_filename
+        if convert:
+            convert_track(wav_filename)
+            tag_file(filename,
+             artist=name,
+             title=track['title'],
+             year=track['created_at'][:4],
+             genre=track['genre'],
+             album=album_name,
+             artwork_url=track['artwork_url'])
+        else:
+            filename = wav_filename
 
     return filename
 
-def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, folders=False, id3_extras={}):
+def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, folders=False, convert=False, id3_extras={},):
     """
     Given a list of tracks, iteratively download all of them.
 
@@ -424,7 +455,17 @@ def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, 
                 if not tagged:
                     wav_filename = filename[:-3] + 'wav'
                     os.rename(filename, wav_filename)
-                    filename = wav_filename
+                    if convert:
+                        convert_track(wav_filename)
+                        tag_file(filename,
+                         artist=track['user']['username'],
+                         title=track['title'],
+                         year=track['release_year'],
+                         genre=track['genre'],
+                         album=id3_extras.get('album', None),
+                         artwork_url=track['artwork_url'])
+                    else:
+                        filename = wav_filename
 
                 filenames.append(filename)
         except Exception as e:
