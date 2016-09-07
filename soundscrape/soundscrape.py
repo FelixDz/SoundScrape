@@ -216,7 +216,7 @@ def process_soundcloud(vargs):
         if not tagged:
             wav_filename = filename[:-3] + 'wav'
             os.rename(filename, wav_filename)
-            if convert:
+            if vargs["convert"]:
                 convert_track(wav_filename)
                 tag_file(filename,
                  artist=track_data['artist'],
