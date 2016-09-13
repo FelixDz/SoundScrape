@@ -12,7 +12,7 @@ import sys
 from clint.textui import colored, puts, progress
 from datetime import datetime
 from mutagen.mp3 import MP3, EasyMP3
-from mutagen.id3 import APIC
+from mutagen.id3 import APIC, TYER
 from mutagen.id3 import ID3 as OldID3
 from subprocess import Popen, PIPE
 from os.path import exists, join, expanduser
@@ -627,7 +627,7 @@ def process_bandcamp(vargs):
 
 
 # Largely borrowed from Ronier's bandcampscrape
-def scrape_bandcamp_url(url, num_tracks=sys.maxsize, nofolders=False, custom_folder='D:\Downloads\SoundScrap'):
+def scrape_bandcamp_url(url, num_tracks=sys.maxsize, nofolders=False, custom_folder=get_download_folder()):
     """
     Pull out artist and track info from a Bandcamp URL.
 
@@ -1124,7 +1124,7 @@ def tag_file(filename, artist, title, year=None, genre=None, artwork_url=None, a
         audio["artist"] = artist
         audio["title"] = title
         if year:
-            audio["date"] = str(str(year).encode('ascii','ignore'))
+            audio["date"] = year
         if album:
             audio["album"] = album
         if track_number:
@@ -1132,6 +1132,16 @@ def tag_file(filename, artist, title, year=None, genre=None, artwork_url=None, a
         if genre:
             audio["genre"] = genre
         audio.save()
+
+        audio = MP3(filename, ID3=OldID3)
+        
+        if year:
+            audio.tags.add(
+                TYER(
+                    encoding=3,  # 3 is for utf-8
+                    text=[year]
+                )
+            )
 
         if artwork_url:
 
@@ -1153,7 +1163,6 @@ def tag_file(filename, artist, title, year=None, genre=None, artwork_url=None, a
             else:
                 image_data = requests.get(artwork_url).content
 
-            audio = MP3(filename, ID3=OldID3)
             audio.tags.add(
                 APIC(
                     encoding=3,  # 3 is for utf-8
@@ -1163,7 +1172,8 @@ def tag_file(filename, artist, title, year=None, genre=None, artwork_url=None, a
                     data=image_data
                 )
             )
-            audio.save()
+        
+        audio.save()
 
         return True
 
