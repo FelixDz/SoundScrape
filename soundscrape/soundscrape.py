@@ -94,11 +94,9 @@ def main():
 
     if vargs['convert']: #Checks binary to make sure it works before allowing any conversions to go ahead
         if vargs['binary']:
+            vargs["binary"][0] = vargs["binary"][0].replace("'", "").replace('"', "")
             if os.path.isfile(vargs["binary"][0]):
-                if not set(['ffmpeg', 'avconv']).issuperset(set([os.path.basename(vargs["binary"][0])])):
-                    puts_safe(colored.red("Don't recognise") + colored.white("Disabling conversion"))
-                    vargs['convert'] = False
-                else:
+                if 'ffmpeg' in os.path.basename(vargs["binary"][0]) or 'avconv' in os.path.basename(vargs["binary"][0]):
                     try:
                         Popen(vargs["binary"][0], stdout=PIPE, stderr=PIPE).wait()
                         puts_safe(colored.blue("Using " + os.path.basename(vargs["binary"][0]) + " for conversion"))
@@ -107,10 +105,10 @@ def main():
                         vargs['convert'] = False
                         print(e)
                         puts_safe(colored.red("Don't recognise: ") + colored.yellow(vargs['binary'][0]) + colored.white(" Disabling conversion"))
-            elif not set(['ffmpeg', 'avconv']).issuperset(set(vargs['binary'])):
-                puts_safe(colored.red("Don't recognise: ") + colored.yellow(vargs['binary'][0]) + colored.white(" Disabling conversion"))
-                vargs['convert'] = False
-            else:
+                else:
+                    puts_safe(colored.red("Don't recognise") + colored.white("Disabling conversion"))
+                    vargs['convert'] = False
+            elif 'ffmpeg' in vargs['binary'][0] or 'avconv' in vargs['binary'][0]:
                 try:
                     Popen(vargs["binary"][0], stdout=PIPE, stderr=PIPE).wait()
                     puts_safe(colored.yellow("Using " + vargs['binary'][0] + " for conversion"))
@@ -119,7 +117,10 @@ def main():
                     vargs['convert'] = False
                     print(e)
                     puts_safe(colored.red("Don't recognise: ") + colored.yellow(vargs['binary'][0]) + colored.white(" Disabling conversion"))
-
+            else:
+                puts_safe(colored.red("Don't recognise: ") + colored.yellow(vargs['binary'][0]) + colored.white(" Disabling conversion"))
+                vargs['convert'] = False
+             
     if 'bandcamp.com' in artist_url or vargs['bandcamp']:
         process_bandcamp(vargs)
     elif 'mixcloud.com' in artist_url or vargs['mixcloud']:
