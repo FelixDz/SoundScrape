@@ -1156,8 +1156,8 @@ def tag_file(filename, artist, title, year=None, genre=None, artwork_url=None, a
         audio["artist"] = artist
         audio["title"] = title
         if year:
-            audio["date"] = year
-            # audio["date"] = str(year)
+            #audio["date"] = year
+            audio["date"] = str(year)
         if album:
             audio["album"] = album
         if track_number:
@@ -1220,6 +1220,7 @@ def tag_file(filename, artist, title, year=None, genre=None, artwork_url=None, a
 
     except Exception as e:
         puts_safe(colored.red("Problem tagging file: ") + colored.white("Is this file a WAV?"))
+        print(e)
         return False
 
 def open_files(filenames):
