@@ -321,7 +321,7 @@ def process_soundcloud(vargs):
                             track['playlist']['tracks'] = track['playlist']['tracks'][:num_tracks]
                             for playlist_track in track['playlist']['tracks']:
                                 album_name = track['playlist']['title']
-                                filename = download_track(playlist_track, album_name, keep_previews, nofolders, is_playlist, custom_folder=vargs['savedir'], filenames)                            
+                                filename = download_track(playlist_track, album_name, keep_previews, nofolders, is_playlist, custom_folder=vargs['savedir'], filenames=filenames)                            
                                 if filename:
                                     filenames.append(filename)
                         else:

@@ -8,7 +8,15 @@ SoundScrape [![Build Status](https://travis-ci.org/Miserlou/SoundScrape.svg)](ht
 Usage
 ---------
 
-First, install it:
+###Installation
+
+#####Manually (after fork)
+
+```bash
+setup.py install
+```
+
+#####Via pip
 
 ```bash
 pip install soundscrape
@@ -34,41 +42,47 @@ You can also use the *-n* argument to only download a certain number of songs.
 soundscrape rabbit-i-am -n 3
 ```
 
-Sets
--------
+###Sets / playlists
 
-Soundscrape can also download sets, but you have to include the full URL of the set you want to download:
+Soundscrape can also download sets / playlists, but you have to include the full URL of the set you want to download:
 
 ```bash
 soundscrape https://soundcloud.com/vsauce-awesome/sets/awesome
 ```
 
-Groups
---------
+###Tracks
 
-Soundscrape can also download tracks from SoundCloud groups with the *-g* argument.
-
-```bash
-soundscrape chopped-and-screwed -gn 2
-```
-
-Tracks
---------
-
-Soundscrape can also download specific tracks with *-t*:
-
-```bash
-soundscrape foolsgoldrecs -t danny-brown-dip
-```
-
-or with just the straight URL:
+Soundscrape can also download specific tracks, just with the straight URL:
 
 ```bash
 soundscrape https://soundcloud.com/foolsgoldrecs/danny-brown-dip
 ```
 
-Likes
---------
+###Folder structure
+
+By default, SoundScrape acts like a download manager and sorts songs into the following format:
+
+```
+Artist/Year - Album/Tracknumber - Title.mp3
+```
+
+With the *-nf* (no folders) argument, Soundscrape acts more like _wget_, downloading all songs in the same directory.
+
+It will also skip previously downloaded tracks.
+
+```bash
+soundscrape murdercitydevils -nf
+```
+
+###Save location
+
+By default, Soundscrape saves the downloaded songs (with eventual subfolder structure for artist / album) in your Downloads directory on Windows and in `/home/Downloads` on other OS. You can specify another download folder with the *-sd* (save directory) argument:
+
+```bash
+soundscrape https://soundcloud.com/alizarinamusic -sd "D:\Music\New"
+```
+
+###Likes
 
 Soundscrape can also download all of an Artist's Liked items with *-l*:
 
@@ -82,8 +96,7 @@ or with just the straight URL:
 soundscrape https://soundcloud.com/troyboi/likes
 ```
 
-High-Quality Downloads Only
---------
+###High-Quality Downloads Only
 
 By default, SoundScrape will try to rip everything it can. However, if you only want to download tracks that have an official download available (which are typically at a higher-quality 320kbps bitrate), you can use the *-d* argument.
 
@@ -91,8 +104,7 @@ By default, SoundScrape will try to rip everything it can. However, if you only 
 soundscrape sly-dogg -d
 ```
 
-Keep Preview Tracks
---------
+###Keep Preview Tracks
 
 By default, SoundScrape will skip the 30-second preview tracks that SoundCloud now provides. You can choose to keep these preview snippets with the *-k* argument.
 
@@ -100,20 +112,7 @@ By default, SoundScrape will skip the 30-second preview tracks that SoundCloud n
 soundscrape chromeo -k
 ```
 
-Folders
---------
-
-By default, SoundScrape aims to act like _wget_, downloading in place in the current directory. With the *-f* argument, however, SoundScrape acts more like a download manager and sorts songs into the following format:
-
-```
-./ARTIST_NAME - ALBUM_NAME/SONG_NUMBER - SONG_TITLE.mp3
-```
-
-It will also skip previously downloaded tracks.
-
-```bash
-soundscrape murdercitydevils -f
-```
+***
 
 Bandcamp
 --------
@@ -123,7 +122,7 @@ SoundScrape can also pull down albums from Bandcamp. For Bandcamp pages, use the
 Note: Currently, when using the *-n* argument, the limit is evaluated for each album separately.
 
 ```bash
-soundscrape warsaw -b -f
+soundscrape warsaw -b -nf
 ```
 
 This also works for non-Bandcamp URLs that are hosted on Bandcamp:
