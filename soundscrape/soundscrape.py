@@ -400,16 +400,16 @@ def download_track(track, album_name=u'', keep_previews=False, nofolders=False, 
         return None
 
     if hard_track_url:
-        puts_safe(colored.green("Scraping") + colored.white(": " + track['title']))
+        puts_safe(colored.green("Scraping") + colored.white(": " + track_title))
     else:
         # Region coded?
-        puts_safe(colored.yellow("Unable to download") + colored.white(": " + track['title']))
+        puts_safe(colored.yellow("Unable to download") + colored.white(": " + track_title))
         return None
 
     filename = download_file(hard_track_url, filename)
     tagged = tag_file(filename,
              artist=name,
-             title=track['title'],
+             title=track_title,
              year=track['created_at'][:4],
              genre=track['genre'],
              album=album_name,
