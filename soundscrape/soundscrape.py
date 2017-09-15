@@ -13,7 +13,7 @@ import urllib
 from clint.textui import colored, puts, progress
 from datetime import datetime
 from mutagen.mp3 import MP3, EasyMP3
-from mutagen.id3 import APIC, TYER, WXXX
+from mutagen.id3 import APIC, TYER, WXXX, TPE2, TCOM
 from mutagen.id3 import ID3 as OldID3
 from subprocess import Popen, PIPE
 from os.path import dirname, exists, join, expanduser
@@ -1129,6 +1129,9 @@ def tag_file(filename, artist, title, year=None, genre=None, artwork_url=None, a
     """
 
     try:
+
+        # EasyMP3 is used for common tags
+
         audio = EasyMP3(filename)
         audio.tags = None
         audio["artist"] = artist
@@ -1146,7 +1149,23 @@ def tag_file(filename, artist, title, year=None, genre=None, artwork_url=None, a
             audio["website"] = url
         audio.save()
 
+        # Once saved we re-open the file with the standard MP3 handler from mutagen for more advanced tags
+
         audio = MP3(filename, ID3=OldID3)
+
+        # Also saves the artist in "album artist" and "composer" tags
+        audio.tags.add(
+            TPE2(
+                encoding=3,  # 3 is for utf-8
+                text=[artist]
+            )
+        )
+        audio.tags.add(
+            TCOM(
+                encoding=3,  # 3 is for utf-8
+                text=[artist]
+            )
+        )
         
         if year:
             audio.tags.add(
