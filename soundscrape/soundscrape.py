@@ -122,7 +122,7 @@ def main():
                         help='Display the current version of SoundScrape')
     parser.add_argument('-sd', '--savedir', type=str, default=get_download_folder(),
                         help='Specify a custom save directory for all the music. Defaulted to "D:\Downloads" for playlists, else "D:\Downloads\SoundScrape".')
-    parser.add_argument('-co', '--convert', action='store_true',
+    parser.add_argument('-co', '--convert', action='store_true', default=True,
                         help='Convert wav files to mp3')
     parser.add_argument('-bin', '--binary', nargs=1, default='ffmpeg',
                         help='Which binary you want to use ffmpeg/avconv or the location of said binarys')
@@ -153,33 +153,30 @@ def main():
             mkdir(vargs['savedir'])
 
     if vargs['convert']: #Checks binary to make sure it works before allowing any conversions to go ahead
-        if vargs['binary']:
-            vargs["binary"][0] = vargs["binary"][0].replace("'", "").replace('"', "")
-            if os.path.isfile(vargs["binary"][0]):
-                if 'ffmpeg' in os.path.basename(vargs["binary"][0]) or 'avconv' in os.path.basename(vargs["binary"][0]):
-                    try:
-                        Popen(vargs["binary"][0], stdout=PIPE, stderr=PIPE).wait()
-                        puts_safe(colored.blue("Using " + os.path.basename(vargs["binary"][0]) + " for WAV to MP3 conversion."))
-                        vargs['convert'] = vargs['binary'][0]
-                    except Exception as e:
-                        vargs['convert'] = False
-                        print(e)
-                        puts_safe(colored.red("Can't recognise : ") + colored.yellow(vargs['binary'][0]) + colored.white(". Disabling the conversion."))
-                else:
-                    puts_safe(colored.red("Can't recognise the entered binary.") + colored.white(" Disabling the conversion."))
-                    vargs['convert'] = False
-            elif 'ffmpeg' in vargs['binary'][0] or 'avconv' in vargs['binary'][0]:
+        vargs['binary'] = vargs['binary'].replace("'", "").replace('"', "")
+        if os.path.isfile(vargs['binary']):
+            if 'ffmpeg' in os.path.basename(vargs['binary']) or 'avconv' in os.path.basename(vargs['binary']):
                 try:
-                    Popen(vargs["binary"][0], stdout=PIPE, stderr=PIPE).wait()
-                    puts_safe(colored.yellow("Using " + vargs['binary'][0] + " for WAV to MP3 conversion."))
-                    vargs['convert'] = vargs['binary'][0]
+                    Popen(vargs['binary'], stdout=PIPE, stderr=PIPE).wait()
+                    #puts_safe(colored.white("Using ") + colored.blue(os.path.basename(vargs['binary'])) + colored.white(" for WAV to MP3 conversion."))
                 except Exception as e:
                     vargs['convert'] = False
                     print(e)
-                    puts_safe(colored.red("Can't recognise : ") + colored.yellow(vargs['binary'][0]) + colored.white(". Disabling the conversion."))
+                    puts_safe(colored.red("Can't recognise : ") + colored.yellow(vargs['binary']) + colored.white(". Disabling the conversion."))
             else:
-                puts_safe(colored.red("Can't recognise : ") + colored.yellow(vargs['binary'][0]) + colored.white(". Disabling the conversion."))
+                puts_safe(colored.red("Can't recognise the entered binary.") + colored.white(" Disabling the conversion."))
                 vargs['convert'] = False
+        elif 'ffmpeg' in vargs['binary'] or 'avconv' in vargs['binary']:
+            try:
+                Popen(vargs['binary'], stdout=PIPE, stderr=PIPE).wait()
+                #puts_safe(colored.white("Using ") + colored.blue(vargs['binary']) + colored.white(" for WAV to MP3 conversion."))
+            except Exception as e:
+                vargs['convert'] = False
+                print(e)
+                puts_safe(colored.red("Can't recognise : ") + colored.yellow(vargs['binary']) + colored.white(". Disabling the conversion."))
+        else:
+            puts_safe(colored.red("Can't recognise : ") + colored.yellow(vargs['binary']) + colored.white(". Disabling the conversion."))
+            vargs['convert'] = False
              
     if 'bandcamp.com' in artist_url or vargs['bandcamp']:
         process_bandcamp(vargs)
@@ -196,19 +193,6 @@ def main():
 ####################################################################
 # SoundCloud
 ####################################################################
-
-def convert_track(wav_filename, bin):
-    try:
-        filename = wav_filename[:-3] + 'mp3'
-        if 'ffmpeg' in bin[-10:]:
-            command = [bin, '-i', wav_filename, "-b:a", "320k",  filename]
-        elif 'avconv' in bin[-10:]:
-            command = [bin, '-i', wav_filename, '-b', '320k', filename]
-        puts_safe(colored.yellow("Converting to mp3: ") + colored.white(filename[:-4]))
-        Popen(command, stdout=PIPE, stderr=PIPE).wait()
-        os.remove(wav_filename)
-    except Exception as e:
-        print(e)
 
 def process_soundcloud(vargs):
     """
@@ -300,6 +284,7 @@ def process_soundcloud(vargs):
         #     return None
 
         filename = download_file(hard_track_url, filename)
+
         tagged = tag_file(filename,
                  artist=track_data['artist'],
                  title=track_data['title'],
@@ -311,8 +296,8 @@ def process_soundcloud(vargs):
         if not tagged:
             wav_filename = filename[:-3] + 'wav'
             os.rename(filename, wav_filename)
-            if vargs["convert"]:
-                convert_track(wav_filename, vargs["convert"])
+            if vargs['convert']:
+                convert_track(wav_filename, vargs['binary'])
                 tag_file(filename,
                  artist=track_data['artist'],
                  title=track_data['title'],
@@ -348,7 +333,7 @@ def process_soundcloud(vargs):
                     tracks = tracks[:num_tracks]
                     aggressive = True
                     for track in tracks:
-                        download_track(track, resolved.title, keep_previews, nofolders, playlist=is_playlist, custom_folder=vargs['savedir'], convert=vargs["convert"])
+                        download_track(track, resolved.title, keep_previews, nofolders, playlist=is_playlist, custom_folder=vargs['savedir'], convert=vargs['convert'])
 
             elif resolved.kind == 'track':
                 tracks = [resolved]
@@ -376,19 +361,19 @@ def process_soundcloud(vargs):
                             track['playlist']['tracks'] = track['playlist']['tracks'][:num_tracks]
                             for playlist_track in track['playlist']['tracks']:
                                 album_name = track['playlist']['title']
-                                filename = download_track(playlist_track, album_name, keep_previews, nofolders, is_playlist, custom_folder=vargs['savedir'], filenames=filenames, convert=vargs["convert"])                            
+                                filename = download_track(playlist_track, album_name, keep_previews, nofolders, is_playlist, custom_folder=vargs['savedir'], filenames=filenames, convert=vargs['convert'])                            
 
                                 if filename:
                                     filenames.append(filename)
                         else:
                             d_track = track['track']
-                            filename = download_track(d_track, custom_folder=vargs['savedir'], convert=vargs["convert"])
+                            filename = download_track(d_track, custom_folder=vargs['savedir'], convert=vargs['convert'])
                             if filename:
                                 filenames.append(filename)
 
         if not aggressive:
             filenames = download_tracks(client, tracks, num_tracks, vargs['downloadable'], vargs['nofolders'],
-                                        id3_extras=id3_extras, playlist=is_playlist, custom_folder=vargs['savedir'], convert=vargs["convert"])
+                                        id3_extras=id3_extras, playlist=is_playlist, custom_folder=vargs['savedir'], convert=vargs['convert'])
 
     if vargs['open']:
         open_files(filenames)
@@ -401,7 +386,7 @@ def get_client():
     client = soundcloud.Client(client_id=CLIENT_ID)
     return client
 
-def download_track(track, album_name=u'', keep_previews=False, nofolders=False, playlist=False, custom_folder=get_download_folder(), filenames=[], convert=True):
+def download_track(track, album_name=u'', keep_previews=False, nofolders=False, playlist=False, custom_folder=get_download_folder(), filenames=[], convert=True, binary='ffmpeg'):
 
     """
     Given a track, force scrape it.
@@ -464,6 +449,7 @@ def download_track(track, album_name=u'', keep_previews=False, nofolders=False, 
         return None
 
     filename = download_file(hard_track_url, filename)
+
     tagged = tag_file(filename,
              artist=name,
              title=track_title,
@@ -471,11 +457,12 @@ def download_track(track, album_name=u'', keep_previews=False, nofolders=False, 
              genre=track['genre'],
              album=album_name,
              artwork_url=track['artwork_url'])
+
     if not tagged:
         wav_filename = filename[:-3] + 'wav'
         os.rename(filename, wav_filename)
         if convert:
-            convert_track(wav_filename, convert)
+            convert_track(wav_filename, binary)
             tag_file(filename,
              artist=name,
              title=track_title,
@@ -488,7 +475,7 @@ def download_track(track, album_name=u'', keep_previews=False, nofolders=False, 
 
     return filename
 
-def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, nofolders=False, id3_extras={}, playlist=False, custom_folder=get_download_folder(), convert=True):
+def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, nofolders=False, id3_extras={}, playlist=False, custom_folder=get_download_folder(), convert=True, binary='ffmpeg'):
 
     """
     Given a list of tracks, iteratively download all of them.
@@ -587,6 +574,7 @@ def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, 
                         location = stream.url
 
                 filename = download_file(location, track_filename)
+
                 tagged = tag_file(filename,
                          artist=track['user']['username'],
                          title=track['title'],
@@ -597,22 +585,28 @@ def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, 
                          track_number=track_nb)
 
                 if not tagged:
-                    wav_filename = filename[:-3] + 'wav'
-                    os.rename(filename, wav_filename)
-                    if convert:
-                        convert_track(wav_filename, convert)
-                        tag_file(filename,
-                         artist=track['user']['username'],
-                         title=track['title'],
-                         year=track_year,
-                         genre=track['genre'],
-                         album=id3_extras.get('album', None),
-                         artwork_url=track['artwork_url'],
-                         track_number=track_nb)
-                    else:
-                        filename = wav_filename
+                    try:
+                        puts_safe(colored.yellow("Tagging failed")  + colored.white(", it may be WAV file ? ") + (colored.white("Trying a ") + colored.blue("conversion to MP3 using " + binary + "...") if convert else colored.yellow(" Add -co arg to try WAV to MP3 conversions.")))
+                        wav_filename = filename[:-3] + 'wav'
+                        if not exists(wav_filename):
+                            os.rename(filename, wav_filename)
+                        if convert:
+                            convert_track(wav_filename, binary)
+                            tag_file(filename,
+                             artist=track['user']['username'],
+                             title=track['title'],
+                             year=track_year,
+                             genre=track['genre'],
+                             album=id3_extras.get('album', None),
+                             artwork_url=track['artwork_url'],
+                             track_number=track_nb)
+                        else:
+                            filename = wav_filename
+                    except Exception as e:
+                        print(e)
 
                 filenames.append(filename)
+
         except Exception as e:
             puts_safe(colored.red("Problem downloading ") + colored.white(track['title']))
 
@@ -1189,10 +1183,23 @@ def download_file(url, path):
 
     return path
 
+def convert_track(wav_filename, binary='ffmpeg'):
+    try:
+        filename = wav_filename[:-3] + 'mp3'
+        if 'ffmpeg' in binary:
+            command = [binary, '-i', wav_filename, "-b:a", "320k", filename]
+        elif 'avconv' in binary:
+            command = [binary, '-i', wav_filename, '-b', '320k', filename]
+        Popen(command, stdout=PIPE, stderr=PIPE).wait()
+        os.remove(wav_filename)
+        puts_safe(colored.white("The file conversion has ") + colored.green("succeeded."))
+    except Exception as e:
+        puts_safe(colored.white("The file conversion has ") + colored.red("failed."))
+        print(e)
 
 def tag_file(filename, artist, title, year=None, genre=None, artwork_url=None, album=None, track_number=None, url=None):
     """
-    Attempt to put ID3 tags on a file.
+    Attempt to put ID3 tags on a MP3 file.
 
     Args:
         artist (str):
@@ -1206,97 +1213,100 @@ def tag_file(filename, artist, title, year=None, genre=None, artwork_url=None, a
         url (str):
     """
 
-    try:
+    if filename[-4:] != '.mp3':
+        puts_safe(colored.red("The file is no MP3 !"))
+        return False
 
-        # EasyMP3 is used for common tags
+    else:
+        try:
 
-        audio = EasyMP3(filename)
-        audio.tags = None
-        audio["artist"] = artist
-        audio["title"] = title
-        if year:
-            #audio["date"] = year
-            audio["date"] = str(year)
-        if album:
-            audio["album"] = album
-        if track_number:
-            audio["tracknumber"] = track_number
-        if genre:
-            audio["genre"] = genre
-        if url: # saves the tag as WOAR
-            audio["website"] = url
-        audio.save()
+            # EasyMP3 is used for common tags
 
-        # Once saved we re-open the file with the standard MP3 handler from mutagen for more advanced tags
-
-        audio = MP3(filename, ID3=OldID3)
-
-        # Also saves the artist in "album artist" and "composer" tags
-        audio.tags.add(
-            TPE2(
-                encoding=3,  # 3 is for utf-8
-                text=[artist]
-            )
-        )
-        audio.tags.add(
-            TCOM(
-                encoding=3,  # 3 is for utf-8
-                text=[artist]
-            )
-        )
-        
-        if year:
-            audio.tags.add(
-                TYER(
-                    encoding=3,  # 3 is for utf-8
-                    text=[year]
-                )
-            )
-
-        if artwork_url:
-
-            artwork_url = artwork_url.replace('https', 'http')
-
-            mime = 'image/jpeg'
-            if '.jpg' in artwork_url:
-                mime = 'image/jpeg'
-            if '.png' in artwork_url:
-                mime = 'image/png'
-
-            if '-large' in artwork_url:
-                new_artwork_url = artwork_url.replace('-large', '-t500x500')
-                try:
-                    image_data = requests.get(new_artwork_url).content
-                except Exception as e:
-                    # No very large image available.
-                    image_data = requests.get(artwork_url).content
-            else:
-                image_data = requests.get(artwork_url).content
-
-            audio.tags.add(
-                APIC(
-                    encoding=3,  # 3 is for utf-8
-                    mime=mime,
-                    type=3,  # 3 is for the cover image
-                    desc='Cover',
-                    data=image_data
-                )
-            )
-        
-        audio.save()
-
-        # because there is software that doesn't seem to use WOAR we save url tag again as WXXX
-        if url:
-            audio = MP3(filename, ID3=OldID3)
-            audio.tags.add( WXXX( encoding=3, url=url ) )
+            audio = EasyMP3(filename)
+            audio.tags = None
+            audio["artist"] = artist
+            audio["title"] = title
+            if year:
+                #audio["date"] = year
+                audio["date"] = str(year)
+            if album:
+                audio["album"] = album
+            if track_number:
+                audio["tracknumber"] = track_number
+            if genre:
+                audio["genre"] = genre
+            if url: # saves the tag as WOAR
+                audio["website"] = url
             audio.save()
 
-        return True
+            # Once saved we re-open the file with the standard MP3 handler from mutagen for more advanced tags
 
-    except Exception as e:
-        puts_safe(colored.red("Problem tagging file: ") + colored.white("Is this file a WAV?"))
-        print(e)
-        return False
+            audio = MP3(filename, ID3=OldID3)
+
+            # Also saves the artist in "album artist" and "composer" tags
+            audio.tags.add(
+                TPE2(
+                    encoding=3,  # 3 is for utf-8
+                    text=[artist]
+                )
+            )
+            audio.tags.add(
+                TCOM(
+                    encoding=3,  # 3 is for utf-8
+                    text=[artist]
+                )
+            )
+            
+            if year:
+                audio.tags.add(
+                    TYER(
+                        encoding=3,  # 3 is for utf-8
+                        text=[year]
+                    )
+                )
+
+            if artwork_url:
+
+                artwork_url = artwork_url.replace('https', 'http')
+
+                mime = 'image/jpeg'
+                if '.jpg' in artwork_url:
+                    mime = 'image/jpeg'
+                if '.png' in artwork_url:
+                    mime = 'image/png'
+
+                if '-large' in artwork_url:
+                    new_artwork_url = artwork_url.replace('-large', '-t500x500')
+                    try:
+                        image_data = requests.get(new_artwork_url).content
+                    except Exception as e:
+                        # No very large image available.
+                        image_data = requests.get(artwork_url).content
+                else:
+                    image_data = requests.get(artwork_url).content
+
+                audio.tags.add(
+                    APIC(
+                        encoding=3,  # 3 is for utf-8
+                        mime=mime,
+                        type=3,  # 3 is for the cover image
+                        desc='Cover',
+                        data=image_data
+                    )
+                )
+
+            # because there is software that doesn't seem to use WOAR we save url tag again as WXXX
+            if url:
+                audio.tags.add( WXXX( encoding=3, url=url ) )
+            
+            audio.save()
+
+            return True
+
+        except Exception as e:
+            #puts_safe(colored.red("Problem tagging file."))
+            #print(e)
+            return False
 
 def open_files(filenames):
     """
