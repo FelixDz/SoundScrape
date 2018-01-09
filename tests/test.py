@@ -15,6 +15,7 @@ from soundscrape.soundscrape import process_soundcloud
 from soundscrape.soundscrape import process_bandcamp
 from soundscrape.soundscrape import process_mixcloud
 from soundscrape.soundscrape import process_audiomack
+from soundscrape.soundscrape import process_musicbed
 
 class TestSoundscrape(unittest.TestCase):
 
@@ -97,7 +98,23 @@ class TestSoundscrape(unittest.TestCase):
         for f in glob.glob('*.mp3'):
            os.unlink(f)
 
+    # def test_musicbed(self):
+    #     for f in glob.glob('*.mp3'):
+    #         os.unlink(f)
+
+    #     mp3_count = len(glob.glob1('', "*.mp3"))
+    #     vargs = {'login':'musicbedtest@gmail.com', 'password':'oo6alY9T', 'path':'', 'folders': False, 'group': False, 'track': '', 'num_tracks': 9223372036854775807, 'bandcamp': False, 'downloadable': False, 'likes': False, 'open': False, 'artist_url': 'https://www.musicbed.com/albums/be-still/2828'}
+    #     process_musicbed(vargs)
+    #     new_mp3_count = len(glob.glob1('', "*.mp3"))
+    #     self.assertTrue(new_mp3_count > mp3_count)
+
+    #     for f in glob.glob('*.mp3'):
+    #        os.unlink(f)
+
     def test_mixcloud(self):
+        """
+        MixCloud is being blocked from Travis, interestingly.
+        """
 
         for f in glob.glob('*.mp3'):
            os.unlink(f)
@@ -120,18 +137,18 @@ class TestSoundscrape(unittest.TestCase):
         for f in glob.glob('*.m4a'):
            os.unlink(f)
 
-    def test_audiomack(self):
-        for f in glob.glob('*.mp3'):
-           os.unlink(f)
+    # def test_audiomack(self):
+    #     for f in glob.glob('*.mp3'):
+    #        os.unlink(f)
 
-        mp3_count = len(glob.glob1('', "*.mp3"))
-        vargs = {'path':'', 'folders': False, 'group': False, 'track': '', 'num_tracks': 9223372036854775807, 'bandcamp': False, 'audiomack': True, 'downloadable': False, 'likes': False, 'open': False, 'convert': False, 'artist_url': 'https://www.audiomack.com/song/bottomfeedermusic/power'}
-        process_audiomack(vargs)
-        new_mp3_count = len(glob.glob1('', "*.mp3"))
-        self.assertTrue(new_mp3_count > mp3_count)
+    #     mp3_count = len(glob.glob1('', "*.mp3"))
+    #     vargs = {'path':'', 'folders': False, 'group': False, 'track': '', 'num_tracks': 9223372036854775807, 'bandcamp': False, 'audiomack': True, 'downloadable': False, 'likes': False, 'open': False, 'artist_url': 'https://www.audiomack.com/song/bottomfeedermusic/power'}
+    #     process_audiomack(vargs)
+    #     new_mp3_count = len(glob.glob1('', "*.mp3"))
+    #     self.assertTrue(new_mp3_count > mp3_count)
 
-        for f in glob.glob('*.mp3'):
-           os.unlink(f)
+    #     for f in glob.glob('*.mp3'):
+    #        os.unlink(f)
 
 if __name__ == '__main__':
     unittest.main()
