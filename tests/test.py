@@ -56,6 +56,20 @@ class TestSoundscrape(unittest.TestCase):
 
         for f in glob.glob('*.mp3'):
            os.unlink(f)
+
+    def test_soundcloud_hard_2(self):
+        for f in glob.glob('*.mp3'):
+           os.unlink(f)
+
+        mp3_count = len(glob.glob1('', "*.mp3"))
+        vargs = {'path':'', 'folders': False, 'group': False, 'track': '', 'num_tracks': 1, 'bandcamp': False, 'downloadable': False, 'likes': False, 'open': False, 'artist_url': 'https://soundcloud.com/lostdogz/snuggles-chapstick', 'keep': False}
+        process_soundcloud(vargs)
+        new_mp3_count = len(glob.glob1('', "*.mp3"))
+        self.assertTrue(new_mp3_count > mp3_count)
+        self.assertTrue(new_mp3_count == 1) # This used to be 3, but is now 'Not available in United States.'
+
+        for f in glob.glob('*.mp3'):
+           os.unlink(f)
     
      def test_soundcloud_wav(self): # Output should be a .mp3 file
          for f in glob.glob('*.mp3'):
