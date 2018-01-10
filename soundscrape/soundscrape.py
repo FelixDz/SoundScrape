@@ -116,8 +116,6 @@ def main():
                         help='The name of a specific track by an artist')
     parser.add_argument('-nf', '--nofolders', action='store_true',
                         help='Don\'t use classic folder structure.')
-    parser.add_argument('-p', '--path', type=str, default='',
-                        help='Set directory path where downloads should be saved to')
     parser.add_argument('-P', '--password', type=str, default='soundscraperocks',
                         help='Set password')
     parser.add_argument('-o', '--open', action='store_true',
@@ -296,7 +294,7 @@ def process_soundcloud(vargs):
         tagged = tag_file(filename,
                  artist=track_data['artist'],
                  title=track_data['title'],
-                 year='2017',
+                 year='2018',
                  genre='',
                  album='',
                  artwork_url='')
@@ -309,7 +307,7 @@ def process_soundcloud(vargs):
                 tag_file(filename,
                  artist=track_data['artist'],
                  title=track_data['title'],
-                 year='2017',
+                 year='2018',
                  genre='',
                  album='',
                  artwork_url='')
