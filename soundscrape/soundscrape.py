@@ -127,6 +127,8 @@ def main():
                         help='Display the current version of SoundScrape')
     parser.add_argument('-sd', '--savedir', type=str, default=get_download_folder(),
                         help='Specify a custom save directory for all the music. Defaulted to "D:\Downloads" for playlists, else "D:\Downloads\SoundScrape".')
+    parser.add_argument('-upl', '--userplaylist', action='store_true', default=False,
+                        help='Adding this flag considers that the given URL is a playlist created by a user from various artists, so the save format is adapted.')
     parser.add_argument('-co', '--convert', action='store_true', default=True,
                         help='Convert wav files to mp3')
     parser.add_argument('-bin', '--binary', nargs=1, default='ffmpeg',
@@ -150,6 +152,11 @@ def main():
         vargs['artist_url'] = urllib.parse.quote(vargs['artist_url'][0], safe=':/')
 
     artist_url = vargs['artist_url']
+
+    if vargs['userplaylist']:
+    	vargs['savedir'] = os.path.join(vargs['savedir'], "Playlists")
+    	vargs['nofolders'] = True
+    	puts_safe(colored.white("This is a user playlist, saving to ") + colored.yellow(vargs['savedir']))
 
     if not exists(vargs['savedir']):
         if not access(dirname(vargs['savedir']), W_OK):
@@ -209,7 +216,7 @@ def process_soundcloud(vargs):
     artist_url = vargs['artist_url']
     track_permalink = vargs['track']
     keep_previews = vargs['keep']
-    nofolders = vargs['nofolders']
+    nofolders = vargs['nofolders'] or vargs['userplaylist']
 
     id3_extras = {}
     one_track = False
@@ -332,7 +339,8 @@ def process_soundcloud(vargs):
                 tracks = client.get('/users/' + artist_id + '/tracks', limit=200)
             elif resolved.kind == 'playlist':
                 is_playlist = True
-                id3_extras['album'] = resolved.title
+                album_name = resolved.title
+                id3_extras['album'] = album_name
                 if resolved.tracks != []:
                     tracks = resolved.tracks
                 else:
@@ -340,7 +348,7 @@ def process_soundcloud(vargs):
                     tracks = tracks[:num_tracks]
                     aggressive = True
                     for track in tracks:
-                        download_track(track, resolved.title, keep_previews, nofolders, playlist=is_playlist, custom_folder=vargs['savedir'], convert=vargs['convert'])
+                        download_track(track, album_name=album_name, keep_previews=keep_previews, nofolders=nofolders, playlist=is_playlist, userplaylist=vargs['userplaylist'], custom_folder=vargs['savedir'], convert=vargs['convert'])
 
             elif resolved.kind == 'track':
                 tracks = [resolved]
@@ -368,7 +376,7 @@ def process_soundcloud(vargs):
                             track['playlist']['tracks'] = track['playlist']['tracks'][:num_tracks]
                             for playlist_track in track['playlist']['tracks']:
                                 album_name = track['playlist']['title']
-                                filename = download_track(playlist_track, album_name, keep_previews, nofolders, is_playlist, custom_folder=vargs['savedir'], filenames=filenames, convert=vargs['convert'])                            
+                                filename = download_track(playlist_track, album_name=album_name, keep_previews=keep_previews, nofolders=nofolders, playlist=is_playlist, userplaylist=vargs['userplaylist'], custom_folder=vargs['savedir'], filenames=filenames, convert=vargs['convert'])                            
 
                                 if filename:
                                     filenames.append(filename)
@@ -379,8 +387,7 @@ def process_soundcloud(vargs):
                                 filenames.append(filename)
 
         if not aggressive:
-            filenames = download_tracks(client, tracks, num_tracks, vargs['downloadable'], vargs['nofolders'],
-                                        id3_extras=id3_extras, playlist=is_playlist, custom_folder=vargs['savedir'], convert=vargs['convert'])
+            filenames = download_tracks(client, tracks, num_tracks=num_tracks, downloadable=vargs['downloadable'], nofolders=vargs['nofolders'], id3_extras=id3_extras, playlist=is_playlist, userplaylist=vargs['userplaylist'], custom_folder=vargs['savedir'], convert=vargs['convert'])
 
     if vargs['open']:
         open_files(filenames)
@@ -393,7 +400,7 @@ def get_client():
     client = soundcloud.Client(client_id=CLIENT_ID)
     return client
 
-def download_track(track, album_name=u'', keep_previews=False, nofolders=False, playlist=False, custom_folder=get_download_folder(), filenames=[], convert=True, binary='ffmpeg'):
+def download_track(track, album_name=u'', keep_previews=False, nofolders=False, playlist=False, userplaylist=False, custom_folder=get_download_folder(), filenames=[], convert=True, binary='ffmpeg'):
 
     """
     Given a track, force scrape it.
@@ -418,22 +425,27 @@ def download_track(track, album_name=u'', keep_previews=False, nofolders=False, 
     track_title = sanitize_filename(track['title'])
     track_year = track['created_at'][:4]
 
-    filename = track_artist + ' - ' + track_title + '.mp3'
+    filename = track_title + '.mp3'
 
-    if nofolders:   # No special folders created in the root save folder
+    if nofolders:
+    	filename = track_artist + ' - ' + filename
+    if playlist:
+        filename = track_nb + ' - ' + filename
+        
+    if userplaylist:   # No special folders created in the root save folder
+        filename = join(custom_folder, album_name, filename)
+    elif nofolders:   # No special folders created in the root save folder
         filename = join(custom_folder, filename)
-
     elif playlist:  # Playlist tracks are stored in "Artist\Year - Album\" in the root save folder
         current_dir = join(custom_folder, track_artist)
         if not exists(current_dir):
             mkdir(current_dir)
 
-        current_dir = join(current_dir, track_year + ' - ' + album_name)
+        current_dir = join(current_dir, track_year + ' - ' + id3_extras.get('album', None))
         if not exists(current_dir):
             mkdir(current_dir)
 
         filename = join(current_dir, filename)
-
     else:           # Other tracks are stored in "Artist\" in the root save folder
         current_dir = join(custom_folder, track_artist)
         if not exists(current_dir):
@@ -482,7 +494,7 @@ def download_track(track, album_name=u'', keep_previews=False, nofolders=False, 
 
     return filename
 
-def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, nofolders=False, id3_extras={}, playlist=False, custom_folder=get_download_folder(), convert=True, binary='ffmpeg'):
+def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, nofolders=False, id3_extras={}, playlist=False, userplaylist=False, custom_folder=get_download_folder(), convert=True, binary='ffmpeg'):
 
     """
     Given a list of tracks, iteratively download all of them.
@@ -538,16 +550,22 @@ def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, 
                 track_nb = str(i+1).zfill(2)
                 track_artist = sanitize_filename(track['user']['username'])
                 track_title = sanitize_filename(track['title'])
-                if playlist:
-                    track_filename = track_nb + ' - ' + track_title + '.mp3'
-                else:
-                    track_filename = track_title + '.mp3'
                 track_year = track['created_at'][:4]
 
-                if nofolders:   # No special folders created in the root save folder
-                    track_filename = track_artist + ' - ' + track_filename
-                    track_filename = join(custom_folder, track_filename)
+                track_filename = track_title + '.mp3'
 
+                if nofolders:
+                	track_filename = track_artist + ' - ' + track_filename
+                if playlist:
+                    track_filename = track_nb + ' - ' + track_filename
+                    
+                if userplaylist:
+                    playlist_dir = join(custom_folder, id3_extras.get('album', None))
+                    if not exists(playlist_dir):
+                        mkdir(playlist_dir)
+                    track_filename = join(playlist_dir, track_filename)
+                elif nofolders:   # No special folders created in the root save folder
+                    track_filename = join(custom_folder, track_filename)
                 elif playlist:  # Playlist tracks are stored in "Artist\Year - Album\" in the root save folder
                     current_dir = join(custom_folder, track_artist)
                     if not exists(current_dir):
@@ -558,7 +576,6 @@ def download_tracks(client, tracks, num_tracks=sys.maxsize, downloadable=False, 
                         mkdir(current_dir)
 
                     track_filename = join(current_dir, track_filename)
-
                 else:           # Other tracks are stored in "Artist\" in the root save folder
                     current_dir = join(custom_folder, track_artist)
                     if not exists(current_dir):
