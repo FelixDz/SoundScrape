@@ -21,14 +21,15 @@ from os import access, mkdir, W_OK
 
 ####################################################################
 
-# Please be nice with this!
-CLIENT_ID = '175c043157ffae2c6d5fed16c3d95a4c'
-CLIENT_SECRET = '99a51990bd81b6a82c901d4cc6828e46'
-MAGIC_CLIENT_ID = 'b45b1aa10f1ac2941910a7f0d10f8e28'
+# Loading credentials from JSON file
 
-AGGRESSIVE_CLIENT_ID = 'OmTFHKYSMLFqnu2HHucmclAptedxWXkq'
+credentials = demjson.decode_file( os.path.join(os.path.dirname(__file__), "credentials.json" ))
+CLIENT_ID = credentials['clientId']
+CLIENT_SECRET = credentials['clientSecret']
+MAGIC_CLIENT_ID = credentials['magicClientId']
+AGGRESSIVE_CLIENT_ID = credentials['aggressiveClientId']
+
 APP_VERSION = '1481046241'
-
 
 ####################################################################
 # Code for default folder load from http://stackoverflow.com/a/35851955
